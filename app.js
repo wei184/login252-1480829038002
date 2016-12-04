@@ -1,28 +1,58 @@
-/*eslint-env node*/
+window.addEventListener('load', function() {
 
-//------------------------------------------------------------------------------
-// node.js starter application for Bluemix
-//------------------------------------------------------------------------------
+  var lock = new Auth0Lock(AUTH0_CLIENT_ID, AUTH0_DOMAIN);
 
-// This application uses express as its web server
-// for more info, see: http://expressjs.com
-var express = require('express');
+  // buttons
+  var btn_login = document.getElementById('btn-login');
+  var btn_logout = document.getElementById('btn-logout');
 
-// cfenv provides access to your Cloud Foundry environment
-// for more info, see: https://www.npmjs.com/package/cfenv
-var cfenv = require('cfenv');
+  btn_login.addEventListener('click', function() {
+    lock.show();
+  });
 
-// create a new express server
-var app = express();
+  btn_logout.addEventListener('click', function() {
+    logout();
+  });
 
-// serve the files out of ./public as our main files
-app.use(express.static(__dirname + '/public'));
+  lock.on("authenticated", function(authResult) {
+    lock.getProfile(authResult.idToken, function(error, profile) {
+      if (error) {
+        // Handle error
+        return;
+      }
+      localStorage.setItem('id_token', authResult.idToken);
+      // Display user information
+      show_profile_info(profile);
+    });
+  });
 
-// get the app environment from Cloud Foundry
-var appEnv = cfenv.getAppEnv();
+  //retrieve the profile:
+  var retrieve_profile = function() {
+    var id_token = localStorage.getItem('id_token');
+    if (id_token) {
+      lock.getProfile(id_token, function (err, profile) {
+        if (err) {
+          return alert('There was an error getting the profile: ' + err.message);
+        }
+        // Display user information
+        show_profile_info(profile);
+      });
+    }
+  };
 
-// start server on the specified port and binding host
-app.listen(appEnv.port, '0.0.0.0', function() {
-  // print a message when the server starts listening
-  console.log("server starting on " + appEnv.url);
+  var show_profile_info = function(profile) {
+    var avatar = document.getElementById('avatar');
+    document.getElementById('nickname').textContent = profile.nickname;
+    btn_login.style.display = "none";
+    avatar.src = profile.picture;
+    avatar.style.display = "block";
+    btn_logout.style.display = "block";
+  };
+
+  var logout = function() {
+    localStorage.removeItem('id_token');
+    window.location.href = "/";
+  };
+
+  retrieve_profile();
 });
